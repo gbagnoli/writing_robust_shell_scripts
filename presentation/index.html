@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="assets/styles/applause.css">
     <link rel="stylesheet" href="assets/theme/default.css">
+    <link rel="stylesheet" href="assets/theme/gild.css">
     <!-- Chrome print bug. Credits to @hakimel http://goo.gl/rGoUvj -->
     <script>
       if( window.location.search.match(/pdf/gi) ) {
@@ -30,26 +31,279 @@
         <!-- =========== SLIDE =========== -->
 
         <slide>
-          <h1>Applause</h1>
-          <h3>HTML presentations powered by Angular JS</h3>
-
-          <div class="key-wrapper">
-            <div><span class="key dark-keys">&#9658;</span> or <span class="key dark-keys">space</span> next slide</div>
-            <div><span class="key dark-keys">&#9668;</span> previous</div>
-            <div><span class="key dark-keys">esc</span> toggle "go to" popup</div>
-          </div>
-          <note>This is what is called a speaker note!</note>
+          <h1>Writing robust Shell scripts</h1>
+          <h3>Because shell rocks</h3>
         </slide>
 
         <slide>
-          <h2>Why another presentation framework?</h2>
-          <p>There are plenty of presentation frameworks made with HTML, CSS and Javascript around. So why we need another one?</p>
-          <p>We probably don't. I've started this project just because I wanted to improve my Angular JS skills.</p>
-          <blockquote><code class="inline">blockquote</code> Lorem ipsum dolor sit amet, consectetur adipisicing elit</blockquote>
-          <note>This is the second note</note>
+          <h2>Why should I care?</h2>
+          <p>Because you need something quick, and oh yes let's write a shell script</p>
+          <p>And then end up with a flying spaghetti monster</p>
+          <blockquote>I'll write my new amazing project in bash -- said no one ever</blockquote>
         </slide>
 
         <slide>
+          <h2>srsly?</h2>
+          <img class="abs-center" src="assets/theme/images/yes.gif" alt="YES."/>
+        </slide>
+
+        <slide>
+        <h2>2001: iTunes "installer"</h2>
+        <p>A <i>small</i> shell script (wink wink) that removes the old version</p>
+        <code prism class="language-bash">
+rm -rf $2/Applications/iTunes.app 2
+        </code>
+        <p><code class="inline">$2</code> is the name of the drive where iTunes is being installed on.</p>
+        <p>... but is not quoted, so if the drive contains a space in the name, this resulted in deleting
+        drives with similar names. i.e</p>
+        <code prism class="language-bash">
+# installing on "Disk 1"
+rm -rf Disk 1/Applications/iTunes.app 2
+# figuring out what happened to the disk named "Disk" is left as an exercise
+        </code>
+        </slide>
+
+        <slide>
+        <h2>2011: One space too much</h2>
+        <p>The author of bumblebee was trying to cleanup a bunch of stuff</p>
+        <code prism class="language-bash">
+          rm -rf /usr /lib/nvidia-current/xorg/xorg
+        </code>
+        Whoops!
+        </slide>
+
+        <slide>
+        <h2>2015: Steam clusterfuck</h2>
+        <code prism class="language-bash">
+  STEAMROOT="$(cd "${0%/*}" && echo $PWD)"
+  # ...
+
+  reset_steam() {
+  # ...
+  rm -rf "$STEAMROOT/"*
+  # ...
+  }
+        </code>
+        <p>When <code class="inline">steam.sh</code> is invoked with <code class="inline">--reset</code>
+        it tries to remove the <code class="inline">~/.steam</code> directory. </p>
+        <p>Except when launched with
+        <code class="inline">bash steam.sh</code> so that <code class="inline">$0</code> is <code class="inline">steam.sh</code>,
+        cd fails, <code class="inline">$STEAMROOT</code> is empty and the <code class="inline">rm</code>.. well.</p>
+        </slide>
+
+        <slide>
+        <h2>RHEL: just restart squid!</h2>
+        <code prism class="language-bash">
+restart() {
+  stop
+  RETVAL=$?
+  if [ $RETVAL -eq 0 ] ; then
+  rm -rf $SQUID_PIDFILE_DIR/*
+  start
+  ...
+}
+        </code>
+        <p>At this point should be clear what happened sometimes to <code class="inline">$SQUID_PIDFILE_DIR</code></p>
+        <p> ... and which user init scripts run as :-) </p>
+        </slide>
+
+        <slide>
+        <h2>Outline</h2>
+        <ul>
+          <li>sane coding style (it <strong>helps a lot</strong>)</li>
+          <li><code class="inline">set -e</code></li>
+          <li><code class="inline">set -u</code></li>
+          <li><code class="inline">set -o pipefail</code></li>
+          <li>be careful with <code class="inline">$?</code></li>
+          <li><a href="http://www.shellcheck.net/">shellcheck</a></li>
+        </ul>
+        </slide>
+
+        <slide>
+        <h2>Coding style (ymmv)</h2>
+        <ul>
+          <li>no tabs, use 2 spaces. Do not leave trailing spaces</li>
+          <li>Variables:</li>
+          <ul>
+            <li><code class="inline">$THIS_IS_A_GLOBAL</code> or exported variable</li>
+            <li><code class="inline">$_this_is_another_var</code>: the <code class="inline">_</code> at the beginning makes the code
+              more readable by separating the dollar sign</li>
+            <li>use <code class="inline">local</code> for var declared inside functions</li>
+          </ul>
+          <li>function names with underscores as in <code class="inline">this_is_a_fun() {}</code>
+        </ul>
+        </slide>
+
+        <slide>
+        <h2>Coding style (cont.)</h2>
+        <p>Pipes should be multiline</p>
+        <code prism class="language-bash">
+find "${_keyspace}" -name "${SNAPNAME}" -print0 | \
+  xargs -r0 sh -c 'find "$@" -type f -print0' subfind | \
+  tar -c -a -O --null -T - 2>/dev/null | \
+  /usr/local/bin/gof3r put -b "${S3BUCKET}" -k "${S3_KS_PATH}" 2>&1
+        </code>
+        <p>.. even if some people prefer to have the pipe at the beginning of the line</p>
+        </slide>
+
+        <slide>
+        <h2>set -e (a.k.a. nazi mode)</h2>
+        <p><code class="inline">set -e</code> simply terminates the script with exit code = 1 if:</p>
+        <blockquote>if a simple command (see SHELL GRAMMAR above) exits with a non-zero status. The shell does not exit if the command that fails is part of the command list immediately following a while or until keyword, part of the test in a if statement, part of an && or || list, or if the command's return value is being inverted via !"</blockquote> 
+        </slide>
+
+        <slide>
+        <h2>WAT?</h2>
+        <code prism class="language-bash">
+#!/bin/bash
+set -e
+echo 'ciao' | grep -q 'hi'
+echo 'you will not see this message'
+        </code>
+        <code prism class="language-bash">
+[giacomo:~] $ bash test.sh
+[giacomo:~] $ echo $?
+1
+        </code>
+        </slide>
+
+        <slide>
+        <h2>set -e (CONT.)</h2>
+        <code prism class="language-bash">
+#!/bin/bash
+set -e
+echo "ciao" | grep -q "hi" || echo "not found"
+echo 'this *will* be printed'
+        </code>
+        <code prism class="language-bash">
+[giacomo:~] $ bash test.sh
+not found
+this *will* be printed
+        </code>
+        </slide>
+
+        <slide>
+        <h2>set -e (CONT.)</h2>
+        <p><code class="inline">set -e</code> is tricky, has <a href="http://mywiki.wooledge.org/BashFAQ/105/Answers">a lot of quirks</a>
+        and is generally speaking a PITA</p>
+        <p><strong>but</strong> is really helpful to avoid unexpected behaviours.</p>
+        <p>Just be sure to <code class="inline">echo</code> all the things <strong>*before*</strong> executing as any failing command can quit the script</p>
+        <code prism class="language-bash">
+#!/bin/bash
+set -e
+
+echo "trying this and that"
+my_command arg1 arg2
+echo "Everybody stand back, I'm gonna try some science"
+my_other_command
+# you probably get it
+        </code>
+        <p>You can always temporarly disable it using <code class="inline">set +e</code> -- just don't abuse!</p>
+        </slide>
+
+        <slide>
+        <h2>set -u</h2>
+        <strong>Always use <code class="inline">set -u</code></strong>
+        <p>Makes the script exit with error if a variable is used but undefined.</p>
+        <p>Don't overtrust, it can't help when a variable is declared and set to an empty variable</p>
+        <code prism class="language-bash">
+#!/bin/bash
+set -u
+
+echo "Hi $1"
+        </code>
+        <code prism class="language-bash">
+[giacomo:~] $ bash test.sh gild
+Hi gild
+[giacomo:~] $ bash test.sh
+test.sh: line 5: $1: unbound variable
+        </code>
+        </slide>
+
+        <slide>
+        <h2>set -u (cont.)</h2>
+        <p>Use defaults or test for args (for <code class="inline">"$@"</code>)</p>
+        <code prism class="language-bash">
+#!/bin/bash
+set -e
+set -u
+_from_env=${MY_ENV_VAR:-default_value}
+_target="gild"
+[ $# -eq 1 ] && _target="$1"
+echo "From env: $_from_env , target: $_target"
+        </code>
+        <code prism class="language-bash">
+[giacomo:~] $ bash test.sh
+From env: default_value , target: gild
+[giacomo:~] $ bash test.sh you
+From env: default_value , target: you
+[giacomo:~] $ MY_ENV_VAR="env is cool" bash test.sh you
+From env: env is cool , target: you
+        </code>
+        </slide>
+
+        <slide>
+        <h2>set -o pipefail</h2>
+        The return code of a pipe is the return code of the last command
+        <code prism class="language-bash">
+[giacomo:~] $ echo "hi" | grep -q "ciao" | ls >/dev/null
+[giacomo:~] $ echo $?
+0
+        </code>
+        <p><code class="inline">grep -q</code> fails, but <code class="inline">ls</code> does not, so the pipe exit with success</p>
+        <p>Adding <code class="inline">set -o pipefail</code> to the script will make the pipe fail if any of the command fails</p>
+        <code prism class="language-bash">
+#!/bin/bash
+set -o pipefail
+set -e
+echo "hi" | grep -q "ciao" | ls >/dev/null
+echo "you won't see this line"
+        </code>
+        </slide>
+
+        <slide>
+        <h2>set -o pipefail (cont.)</h2>
+        You can get the various exit codes looking them up in the <code class="inline">$PIPESTATUS</code> array.
+        <code prism class="language-bash">
+echo test | fail_command | something_else
+local _ret_pipe=( ${PIPESTATUS[@]} )
+# from here, `PIPESTATUS` is not available anymore
+        </code>
+        </slide>
+
+
+        <slide>
+        <h2>Return codes and $?</h2>
+        <p>Keep in mind that <code class="inline">$?</code> <strong>*must*</strong> be accessed right after the
+        command itself (like <code class="inline">$PIPESTATUS</code>).</p>
+        <p>Also, when using <code class="inline">set -e</code> the script will fail before that :)</p>
+        <code prism class="language-bash">
+set +e
+which mongo &>/dev/null
+if [ $? -ne 0 ]; then
+  echo "Installing mongo tools"
+  sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+  echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+  sudo apt-get update
+  sudo apt-get install -y mongodb-org-tools=${mongodb_tools_version} mongodb-org-shell=${mongodb_tools_version}
+fi
+set -e
+        </code>
+        Saving <code class="inline">$?</code> to a local variable for later uses is a good pratice as well
+        </slide>
+
+        <slide>
+        <h2>shellcheck</h2>
+        <p>Finally, install <a href="http://www.shellcheck.net/">shellcheck</a> in your editor, this will check for common
+        mistakes.</p>
+        <img class="abs-center" src="assets/theme/images/shellcheck.png" alt="awesome."/>
+        </slide>
+
+        <slide>
+        <h2>That's all!</h2>
+        <img class="abs-center" src="assets/theme/images/fin.gif" alt="not too happy."/>
+        </slide>
+<!--        <slide>
           <h2>Presenter mode</h2>
           <table>
             <tr>
@@ -109,7 +363,7 @@
           <img class="center media" src="assets/theme/images/slow-clap.gif" alt=""/>
           <p class="center">Follow me on twitter <a href="https://twitter.com/granze">@granze</a></p>
         </slide>
-
+-->
         <!-- =========== /SLIDE =========== -->
 
       </div>
